@@ -7,25 +7,42 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+
+	"github.com/I-Maged/00-golang-first-server/pkg/config"
+	"github.com/I-Maged/00-golang-first-server/pkg/models"
 )
 
+var app *config.AppConfig
 var functions = template.FuncMap{}
 
-func RenderTemplate(w http.ResponseWriter, tmpl string) {
-	tc, err := CreateTemplateCache()
-	if err != nil {
-		log.Fatal(err)
+func NewTemplates(a *config.AppConfig) {
+	app = a
+}
+
+func AddDefaultData(td *models.TemplateDate) *models.TemplateDate {
+	return td
+}
+
+func RenderTemplate(w http.ResponseWriter, tmpl string, td *models.TemplateDate) {
+	var tc map[string]*template.Template
+	if app.UseCache {
+		tc = app.TemplateCache
+	} else {
+		tc, _ = CreateTemplateCache()
 	}
 
 	t, ok := tc[tmpl]
 	if !ok {
-		log.Fatal(err)
+		log.Fatal("Could not get template cache")
 	}
 
 	buf := new(bytes.Buffer)
-	_ = t.Execute(buf, nil)
 
-	_, err = buf.WriteTo(w)
+	td = AddDefaultData(td)
+
+	_ = t.Execute(buf, td)
+
+	_, err := buf.WriteTo(w)
 	if err != nil {
 		fmt.Println("Error writing template to browser", err)
 	}
